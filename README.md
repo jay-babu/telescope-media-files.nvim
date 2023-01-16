@@ -14,7 +14,7 @@ Plug 'nvim-telescope/telescope-media-files.nvim'
 ## Setup
 
 ``` lua
-require('telescope').load_extension('media_files')
+require('telescope').load_extension('wallpaper_engine')
 
 ```
 
@@ -25,7 +25,7 @@ setup function.
 ```lua
 require'telescope'.setup {
   extensions = {
-    media_files = {
+    wallpaper_engine = {
       -- filetypes whitelist
       -- defaults to {"png", "jpg", "mp4", "webm", "pdf"}
       filetypes = {"png", "webp", "jpg", "jpeg"},
@@ -38,10 +38,10 @@ require'telescope'.setup {
 
 ## Available commands
 ```viml
-:Telescope media_files
+:Telescope wallpaper_engine
 
 "Using lua function
-lua require('telescope').extensions.media_files.media_files()
+lua require('telescope').extensions.wallpaper_engine.wallpaper_engine()
 ```
 
 When you press `<CR>` on a selected file, it will copy its relative path to the clipboard

@@ -1,5 +1,27 @@
 local has_telescope, telescope = pcall(require, "telescope")
 
+local inspect = require("inspect")
+
+--- @param projectName string
+local function toName(projectName)
+	local handle = io.popen(
+		"cat "
+			.. "'"
+			.. vim.fn.resolve(
+				"/mnt/c/Program Files (x86)/Steam/steamapps/workshop/content/431960/" .. projectName .. "/project.json"
+			)
+			.. "'"
+			.. " | jq .title"
+	)
+	local result = ""
+	if handle ~= nil then
+		result = vim.fn.split(handle:read("*a"), "\n")[1]
+		handle:close()
+	end
+
+	return result
+end
+
 -- TODO: make dependency errors occur in a better way
 if not has_telescope then
 	error("This plugin requires telescope.nvim (https://github.com/nvim-telescope/telescope.nvim)")
@@ -71,7 +93,7 @@ function M.wallpaper_engine(opts)
 			"rg",
 			"--files",
 			"--glob",
-			[[*.{]] .. table.concat(filetypes, ",") .. [[}]],
+			[[preview*.{]] .. table.concat(filetypes, ",") .. [[}]],
 			".",
 		},
 	}
@@ -92,6 +114,7 @@ function M.wallpaper_engine(opts)
 	opts.attach_mappings = function(prompt_bufnr, map)
 		actions.select_default:replace(function()
 			local entry = action_state.get_selected_entry()
+			print(inspect(entry))
 			actions.close(prompt_bufnr)
 			if entry[1] then
 				local filename = entry[1]
@@ -101,7 +124,25 @@ function M.wallpaper_engine(opts)
 		end)
 		return true
 	end
-	opts.path_display = { "shorten" }
+	opts.entry_maker = function(entry)
+		local function mysplit(inputstr, sep)
+			if sep == nil then
+				sep = "%s"
+			end
+			local t = {}
+			for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
+				table.insert(t, str)
+			end
+			return t
+		end
+
+		local folder = mysplit(entry, "/")[2]
+		return {
+			value = vim.fn.resolve(entry),
+			display = toName(folder),
+			ordinal = folder,
+		}
+	end
 
 	local popup_opts = {}
 	opts.get_preview_window = function()
@@ -125,7 +166,8 @@ end
 return require("telescope").register_extension({
 	setup = function(ext_config)
 		filetypes = ext_config.filetypes or { "png", "jpg", "gif", "mp4", "webm", "pdf" }
-		find_cmd = ext_config.find_cmd or "fd"
+		-- find_cmd = ext_config.find_cmd or "rg"
+		find_cmd = "rg"
 		image_stretch = ext_config.image_stretch or 250
 	end,
 	exports = {
