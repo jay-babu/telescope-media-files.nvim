@@ -1,11 +1,9 @@
-local has_telescope, telescope = pcall(require, "telescope")
+local has_telescope, _ = pcall(require, "telescope")
 local Job = require("plenary.job")
 local Path = require("plenary.path")
 
 local data_path = vim.fn.stdpath("data")
 local cache_config = string.format("%s/wallpaper_engine.json", data_path)
-
-local inspect = require("inspect")
 
 if not has_telescope then
 	error("This plugin requires telescope.nvim (https://github.com/nvim-telescope/telescope.nvim)")
@@ -25,19 +23,6 @@ local M = {}
 local filetypes = {}
 local find_cmd = ""
 local image_stretch = 250
-
-M.refresh = function()
-	Job:new({
-		command = "bash",
-		args = { "refresh", cache_config },
-		cwd = vim.fn.resolve(M.base_directory .. "/scripts/"),
-	}):sync()
-end
-
-local function read()
-	local config = vim.json.decode(Path:new(cache_config):read())
-	return config
-end
 
 M.base_directory = ""
 M.media_preview = defaulter(function(opts)
@@ -64,28 +49,6 @@ end, {})
 
 function M.wallpaper_engine(opts)
 	local find_commands = {
-		find = {
-			"find",
-			".",
-			"-iregex",
-			[[.*\.\(]] .. table.concat(filetypes, "\\|") .. [[\)$]],
-		},
-		fd = {
-			"fd",
-			"--type",
-			"f",
-			"--regex",
-			[[.*.(]] .. table.concat(filetypes, "|") .. [[)$]],
-			".",
-		},
-		fdfind = {
-			"fdfind",
-			"--type",
-			"f",
-			"--regex",
-			[[.*.(]] .. table.concat(filetypes, "|") .. [[)$]],
-			".",
-		},
 		rg = {
 			"bash",
 			"/home/archy/code/telescope-wallpaper-engine.nvim/scripts/refresh",
@@ -122,25 +85,14 @@ function M.wallpaper_engine(opts)
 		if jqEntry == nil then
 			return
 		end
-		local function mysplit(inputstr, sep)
-			if sep == nil then
-				sep = "%s"
-			end
-			local t = {}
-			for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
-				table.insert(t, str)
-			end
-			return t
-		end
 
-		local folder = mysplit(entry, "/")[2]
 		return {
 			value = vim.fn.resolve(jqEntry.path .. jqEntry.fileName),
 			display = jqEntry.title,
 			ordinal = jqEntry.title,
 			projectPath = [[C:\Program Files (x86)\Steam\steamapps\workshop\content\431960\]]
-				.. jqEntry.folderId
-				.. [[\project.json]],
+					.. jqEntry.folderId
+					.. [[\project.json]],
 		}
 	end
 
@@ -172,7 +124,5 @@ return require("telescope").register_extension({
 	end,
 	exports = {
 		wallpaper_engine = M.wallpaper_engine,
-		refresh = M.refresh,
-		read = read,
 	},
 })
