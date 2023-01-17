@@ -1,9 +1,5 @@
 local has_telescope, _ = pcall(require, "telescope")
 local Job = require("plenary.job")
-local Path = require("plenary.path")
-
-local data_path = vim.fn.stdpath("data")
-local cache_config = string.format("%s/wallpaper_engine.json", data_path)
 
 if not has_telescope then
 	error("This plugin requires telescope.nvim (https://github.com/nvim-telescope/telescope.nvim)")
@@ -71,7 +67,6 @@ function M.wallpaper_engine(opts)
 	opts.attach_mappings = function(prompt_bufnr, map)
 		actions.select_default:replace(function()
 			local entry = action_state.get_selected_entry()
-			print(entry.projectPath)
 			Job:new({
 				command = [[/mnt/c/Program Files (x86)/Steam/steamapps/common/wallpaper_engine/wallpaper32.exe]],
 				args = { "-control", "openWallpaper", "-file", entry.projectPath },
