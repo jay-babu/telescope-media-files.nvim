@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+IFS=$'\n'
+files=$(rg --files --glob "preview*.{jpg,png}" "/mnt/c/Program Files (x86)/Steam/steamapps/workshop/content/431960")
+
+rg --files --glob "preview*.{jpg,png}" "/mnt/c/Program Files (x86)/Steam/steamapps/workshop/content/431960" |
+	while read line; do
+		folder="${line%/*}/"
+		folderId1=$(basename $folder)
+		title=$(cat "${folder}project.json" | jq --raw-output ".title")
+		# echo $title
+		jq -n -c --arg title "$title" --arg dirPath "$folder" --arg fileName "$(basename "$line")" --arg folderId $folderId1 '{title: $title, path: $dirPath, fileName: $fileName, folderId: $folderId}'
+	done

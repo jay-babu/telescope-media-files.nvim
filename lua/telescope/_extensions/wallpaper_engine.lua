@@ -1,28 +1,12 @@
 local has_telescope, telescope = pcall(require, "telescope")
+local Job = require("plenary.job")
+local Path = require("plenary.path")
+
+local data_path = vim.fn.stdpath("data")
+local cache_config = string.format("%s/wallpaper_engine.json", data_path)
 
 local inspect = require("inspect")
 
---- @param projectName string
-local function toName(projectName)
-	local handle = io.popen(
-		"cat "
-			.. "'"
-			.. vim.fn.resolve(
-				"/mnt/c/Program Files (x86)/Steam/steamapps/workshop/content/431960/" .. projectName .. "/project.json"
-			)
-			.. "'"
-			.. " | jq .title"
-	)
-	local result = ""
-	if handle ~= nil then
-		result = vim.fn.split(handle:read("*a"), "\n")[1]
-		handle:close()
-	end
-
-	return result
-end
-
--- TODO: make dependency errors occur in a better way
 if not has_telescope then
 	error("This plugin requires telescope.nvim (https://github.com/nvim-telescope/telescope.nvim)")
 end
@@ -42,6 +26,19 @@ local filetypes = {}
 local find_cmd = ""
 local image_stretch = 250
 
+M.refresh = function()
+	Job:new({
+		command = "bash",
+		args = { "refresh", cache_config },
+		cwd = vim.fn.resolve(M.base_directory .. "/scripts/"),
+	}):sync()
+end
+
+local function read()
+	local config = vim.json.decode(Path:new(cache_config):read())
+	return config
+end
+
 M.base_directory = ""
 M.media_preview = defaulter(function(opts)
 	return previewers.new_termopen_previewer({
@@ -54,7 +51,7 @@ M.media_preview = defaulter(function(opts)
 			end
 			return {
 				M.base_directory .. "/scripts/vimg",
-				string.format([[%s/%s]], opts.cwd, tmp_table[1]),
+				tmp_table[1],
 				preview.col,
 				preview.line + 1,
 				preview.width,
@@ -90,11 +87,8 @@ function M.wallpaper_engine(opts)
 			".",
 		},
 		rg = {
-			"rg",
-			"--files",
-			"--glob",
-			[[preview*.{]] .. table.concat(filetypes, ",") .. [[}]],
-			".",
+			"bash",
+			"/home/archy/code/telescope-wallpaper-engine.nvim/scripts/refresh",
 		},
 	}
 
@@ -114,17 +108,20 @@ function M.wallpaper_engine(opts)
 	opts.attach_mappings = function(prompt_bufnr, map)
 		actions.select_default:replace(function()
 			local entry = action_state.get_selected_entry()
-			print(inspect(entry))
+			print(entry.projectPath)
+			Job:new({
+				command = [[/mnt/c/Program Files (x86)/Steam/steamapps/common/wallpaper_engine/wallpaper32.exe]],
+				args = { "-control", "openWallpaper", "-file", entry.projectPath },
+			}):start()
 			actions.close(prompt_bufnr)
-			if entry[1] then
-				local filename = entry[1]
-				vim.fn.setreg(vim.v.register, filename)
-				vim.notify("The image path has been copied!")
-			end
 		end)
 		return true
 	end
 	opts.entry_maker = function(entry)
+		local jqEntry = vim.json.decode(entry)
+		if jqEntry == nil then
+			return
+		end
 		local function mysplit(inputstr, sep)
 			if sep == nil then
 				sep = "%s"
@@ -138,9 +135,12 @@ function M.wallpaper_engine(opts)
 
 		local folder = mysplit(entry, "/")[2]
 		return {
-			value = vim.fn.resolve(entry),
-			display = toName(folder),
-			ordinal = folder,
+			value = vim.fn.resolve(jqEntry.path .. jqEntry.fileName),
+			display = jqEntry.title,
+			ordinal = jqEntry.title,
+			projectPath = [[C:\Program Files (x86)\Steam\steamapps\workshop\content\431960\]]
+				.. jqEntry.folderId
+				.. [[\project.json]],
 		}
 	end
 
@@ -149,7 +149,7 @@ function M.wallpaper_engine(opts)
 		return popup_opts.preview
 	end
 	local picker = pickers.new(opts, {
-		prompt_title = "Media Files",
+		prompt_title = "Wallpaper Engine Picker",
 		finder = finders.new_oneshot_job(find_commands[find_cmd], opts),
 		previewer = M.media_preview.new(opts),
 		sorter = conf.file_sorter(opts),
@@ -172,5 +172,7 @@ return require("telescope").register_extension({
 	end,
 	exports = {
 		wallpaper_engine = M.wallpaper_engine,
+		refresh = M.refresh,
+		read = read,
 	},
 })
