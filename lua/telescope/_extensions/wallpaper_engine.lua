@@ -1,5 +1,4 @@
 local has_telescope, _ = pcall(require, "telescope")
-local Job = require("plenary.job")
 
 if not has_telescope then
 	error("This plugin requires telescope.nvim (https://github.com/nvim-telescope/telescope.nvim)")
@@ -67,11 +66,17 @@ function M.wallpaper_engine(opts)
 	opts.attach_mappings = function(prompt_bufnr, map)
 		actions.select_default:replace(function()
 			local entry = action_state.get_selected_entry()
-			Job:new({
-				command = [[/mnt/c/Program Files (x86)/Steam/steamapps/common/wallpaper_engine/wallpaper32.exe]],
-				args = { "-control", "openWallpaper", "-file", entry.projectPath },
-			}):start()
 			actions.close(prompt_bufnr)
+			local async = require("plenary.async")
+			async.run(function()
+				local Job = require("plenary.job")
+				Job
+						:new({
+							command = [[/mnt/c/Program Files (x86)/Steam/steamapps/common/wallpaper_engine/wallpaper32.exe]],
+							args = { "-control", "openWallpaper", "-file", entry.projectPath },
+						})
+						:start()
+			end)
 		end)
 		return true
 	end
